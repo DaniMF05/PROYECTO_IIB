@@ -203,22 +203,6 @@ La aplicación muestra información detallada en la consola:
 🎯 GENERANDO VISTA 3D PARA GUI
 ```
 
-## 🤝 Contribuir
-
-### Para Colaboradores del Proyecto
-
-1. **Fork del repositorio**
-2. **Crear rama para tu feature**: `git checkout -b feature/nueva-funcionalidad`
-3. **Commit tus cambios**: `git commit -m 'Agregar nueva funcionalidad'`
-4. **Push a la rama**: `git push origin feature/nueva-funcionalidad`
-5. **Crear Pull Request**
-
-### Convenciones de Código
-
-- **Estilo**: Seguir PEP 8
-- **Documentación**: Docstrings en español
-- **Commits**: Mensajes descriptivos en español
-- **Emoji**: Usar emojis en comentarios para mejor legibilidad 🎨
 
 ## 📊 Datos Técnicos
 
@@ -235,13 +219,9 @@ Este proyecto es parte de un trabajo académico de Métodos Numéricos. Uso educ
 
 ## 👥 Autores
 
-- **Estudiante**: [Tu Nombre]
+- **Estudiantes**:
+    - Joshua Daniel Menendez Farias
+    - Celeste Gallardo
+    - Jessua Villacis
 - **Curso**: Métodos Numéricos - Cuarto Semestre
-- **Institución**: [Tu Universidad]
-
----
-
-**¿Problemas o sugerencias?** Abre un [Issue](https://github.com/tu-usuario/proyecto-horizonte-3d/issues) en GitHub.
-
-**⭐ Si te gusta el proyecto, ¡dale una estrella!**
-# PROYECTO_IIB
+- **Institución**: Escuela Politécnica Nacional
