@@ -1,0 +1,29 @@
+# Visualizador 3D de Horizonte - Ecuador
+# Dependencias del proyecto
+
+# Procesamiento numérico
+numpy>=1.19.0
+
+# Visualización 2D
+matplotlib>=3.3.0
+
+# Visualización 3D
+pyvista>=0.32.0
+
+# Interfaz gráfica (incluida en Python estándar)
+# tkinter - No requiere instalación separada en la mayoría de sistemas
+
+# Dependencias adicionales de PyVista
+vtk>=9.0.0
+
+# Para mejores gráficos (opcional)
+pillow>=8.0.0
+
+# Threading (incluido en Python estándar)
+# threading - Incluido en Python
+
+# Matemáticas (incluido en Python estándar) 
+# math - Incluido en Python
+
+# Sistema operativo (incluido en Python estándar)
+# os - Incluido en Python
