@@ -18,7 +18,7 @@ Un visualizador 3D interactivo que permite generar vistas realistas del horizont
 - [Arquitectura del Código](#-arquitectura-del-código)
 - [Ejemplos de Uso](#-ejemplos-de-uso)
 - [Troubleshooting](#-troubleshooting)
-- [Contribuir](#-contribuir)
+
 
 ## ✨ Características
 
@@ -52,7 +52,6 @@ PROYECTO_IIB_REPOSITORIO/
 | `gui_horizonte.py` | **APLICACIÓN PRINCIPAL** - Interfaz gráfica | ✅ Activo |
 | `horizonte_3d_gui.py` | Motor de renderizado 3D para GUI | ✅ Activo |
 | `simulador_horizonte_corregido.py` | Clase base para procesamiento de datos | ✅ Activo |
-| `horizonte_3d_final.py` | Versión standalone independiente | 🟡 Opcional |
 
 ## 🚀 Instalación
 
