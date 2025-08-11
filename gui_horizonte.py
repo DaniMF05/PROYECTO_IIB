@@ -13,91 +13,116 @@ Interfaz simple para configurar coordenadas y dirección de vista.
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import math
+import tkintermapview 
 from horizonte_3d_gui import HorizonteViewer3D_GUI
 
+class Compass(tk.Canvas):
+    """Widget de brújula interactiva para seleccionar el azimut."""
+    def __init__(self, parent, width=150, height=150, variable=None, command=None):
+        super().__init__(parent, width=width, height=height, bg=parent.cget('bg'), highlightthickness=0)
+        self.variable = variable if variable else tk.DoubleVar(value=90.0)
+        self.command = command
+        self.width = width
+        self.height = height
+        self.center_x = width / 2
+        self.center_y = height / 2
+        self.radius = min(self.center_x, self.center_y) * 0.8
+
+        self.bind("<B1-Motion>", self._on_drag)
+        self.bind("<Button-1>", self._on_click)
+        self._draw_compass()
+
+    def _draw_compass(self):
+        self.delete("all")
+        # Dibuja el cuerpo de la brújula
+        self.create_oval(self.center_x - self.radius, self.center_y - self.radius,
+                         self.center_x + self.radius, self.center_y + self.radius,
+                         outline="gray", width=2)
+        
+        # Dibuja las etiquetas cardinales
+        for angle, label in [(0, "N"), (90, "E"), (180, "S"), (270, "O")]:
+            rad = math.radians(angle - 90)
+            x = self.center_x + self.radius * 1.15 * math.cos(rad)
+            y = self.center_y + self.radius * 1.15 * math.sin(rad)
+            self.create_text(x, y, text=label, font=("Arial", 10, "bold"))
+        
+        # Dibuja la aguja
+        azimut = self.variable.get()
+        rad = math.radians(azimut - 90)
+        x_end = self.center_x + self.radius * 0.9 * math.cos(rad)
+        y_end = self.center_y + self.radius * 0.9 * math.sin(rad)
+        
+        # Aguja principal (Roja)
+        self.create_line(self.center_x, self.center_y, x_end, y_end,
+                         fill="red", width=3, arrow=tk.LAST)
+        # Contrapeso de la aguja (Gris)
+        x_start = self.center_x - self.radius * 0.3 * math.cos(rad)
+        y_start = self.center_y - self.radius * 0.3 * math.sin(rad)
+        self.create_line(x_start, y_start, self.center_x, self.center_y, fill="gray", width=3)
+        self.create_oval(self.center_x - 5, self.center_y - 5, self.center_x + 5, self.center_y + 5, fill="black")
+
+    def _update_azimut(self, event):
+        dx = event.x - self.center_x
+        dy = event.y - self.center_y
+        # Atan2 devuelve el ángulo en radianes. +90 para ajustar el 0 al Norte.
+        angle = math.degrees(math.atan2(dy, dx)) + 90
+        if angle < 0:
+            angle += 360
+        self.variable.set(round(angle, 1))
+        self._draw_compass()
+        if self.command:
+            self.command(self.variable.get())
+
+    def _on_click(self, event):
+        self._update_azimut(event)
+
+    def _on_drag(self, event):
+        self._update_azimut(event)
+        
+    def set(self, angle):
+        self.variable.set(angle)
+        self._draw_compass()
+        if self.command:
+            self.command(self.variable.get())
+            
+            
 class HorizonteGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("🏔️ Visualizador 3D de Horizonte - Ecuador")
-        self.root.geometry("650x750")  # MÁS GRANDE para que todo sea visible
+        # Geometría más ancha para el mapa
+        self.root.geometry("1000x800")
         self.root.resizable(True, True)
-        self.root.minsize(600, 700)  # Tamaño mínimo más grande
+        self.root.minsize(800, 600)
         
-        # Variables de estado
         self.viewer = None
-        self.vista_actual = None
-        
-        # Crear interfaz
         self.crear_interfaz()
-        
-        # Centrar ventana
         self.centrar_ventana()
     
     def centrar_ventana(self):
-        """Centra la ventana en la pantalla."""
         self.root.update_idletasks()
         width = self.root.winfo_width()
         height = self.root.winfo_height()
         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
         self.root.geometry(f"{width}x{height}+{x}+{y}")
-    
+
     def crear_interfaz(self):
-        """Crea todos los elementos de la interfaz."""
-        
-        # Título principal
-        titulo = tk.Label(self.root, text="🏔️ Visualizador 3D de Horizonte", 
-                         font=("Arial", 16, "bold"), fg="darkblue")
-        titulo.pack(pady=10)
-        
-        subtitulo = tk.Label(self.root, text="Ecuador Continental", 
-                           font=("Arial", 12), fg="gray")
-        subtitulo.pack(pady=(0, 10))
-        
-        # === CREAR CANVAS CON SCROLLBAR PARA CONTENIDO ===
-        # Frame contenedor para canvas y scrollbar
-        canvas_frame = tk.Frame(self.root)
-        canvas_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        
-        # Canvas principal
-        self.canvas = tk.Canvas(canvas_frame, bg="white")
-        
-        # Scrollbar vertical
-        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=self.canvas.yview)
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Empaquetar canvas y scrollbar
-        scrollbar.pack(side="right", fill="y")
-        self.canvas.pack(side="left", fill="both", expand=True)
-        
-        # Frame principal DENTRO del canvas
-        self.main_frame = tk.Frame(self.canvas, bg="white")
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
-        
-        # Configurar scroll con rueda del mouse
-        def on_mousewheel(event):
-            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        
-        self.canvas.bind_all("<MouseWheel>", on_mousewheel)
-        
-        # Configurar actualización del scroll region
-        def configure_scroll_region(event=None):
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        
-        self.main_frame.bind("<Configure>", configure_scroll_region)
-        
-        # Configurar ancho del frame interno
-        def configure_canvas_width(event):
-            canvas_width = event.width
-            self.canvas.itemconfig(self.canvas_window, width=canvas_width)
-        
-        self.canvas.bind("<Configure>", configure_canvas_width)
-        
-        # === CONTENIDO ORIGINAL (usando main_frame en lugar de main_frame) ===
-        
-        # === SECCIÓN 1: UBICACIONES PRECONFIGURADAS ===
-        ubicaciones_frame = tk.LabelFrame(self.main_frame, text="📍 Ubicaciones Preconfiguradas", 
-                                        font=("Arial", 11, "bold"), padx=10, pady=10)
+        # Frame principal para dividir en dos columnas: controles (izquierda) y mapa (derecha)
+        main_pane = tk.PanedWindow(self.root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        main_pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # === COLUMNA IZQUIERDA: CONTROLES ===
+        controls_frame = tk.Frame(main_pane, width=400)
+        main_pane.add(controls_frame, stretch="never")
+
+        # Título
+        titulo = tk.Label(controls_frame, text="Configuración de Vista", font=("Arial", 16, "bold"), fg="darkblue")
+        titulo.pack(pady=(5, 15), anchor="w")
+
+        # --- UBICACIONES PRECONFIGURADAS ---
+        ubicaciones_frame = tk.LabelFrame(controls_frame, text="📍 Ubicaciones Preconfiguradas", font=("Arial", 11, "bold"), padx=10, pady=10)
         ubicaciones_frame.pack(fill="x", pady=(0, 15))
         
         self.ubicaciones = {
@@ -111,256 +136,172 @@ class HorizonteGUI:
             "Volcán Cotopaxi": (-0.6137, -78.4729),
             "Norte de Quito": (-0.2292, -78.5182)
         }
-        
         self.ubicacion_var = tk.StringVar(value="Seleccionar ubicación...")
-        ubicacion_combo = ttk.Combobox(ubicaciones_frame, textvariable=self.ubicacion_var,
-                                     values=list(self.ubicaciones.keys()), 
-                                     state="readonly", width=40)
-        ubicacion_combo.pack(pady=5)
+        ubicacion_combo = ttk.Combobox(ubicaciones_frame, textvariable=self.ubicacion_var, values=list(self.ubicaciones.keys()), state="readonly")
+        ubicacion_combo.pack(fill="x", pady=5)
         ubicacion_combo.bind("<<ComboboxSelected>>", self.cargar_ubicacion)
-        
-        # === SECCIÓN 2: COORDENADAS PERSONALIZADAS ===
-        coords_frame = tk.LabelFrame(self.main_frame, text="🗺️ Coordenadas Personalizadas", 
-                                   font=("Arial", 11, "bold"), padx=10, pady=10)
+
+        # --- COORDENADAS (AHORA SOLO LECTURA, ACTUALIZADO POR EL MAPA) ---
+        coords_frame = tk.LabelFrame(controls_frame, text="🗺️ Coordenadas (Seleccionadas en el mapa)", font=("Arial", 11, "bold"), padx=10, pady=10)
         coords_frame.pack(fill="x", pady=(0, 15))
-        
-        # Latitud
-        lat_frame = tk.Frame(coords_frame)
-        lat_frame.pack(fill="x", pady=5)
-        tk.Label(lat_frame, text="Latitud:", width=12, anchor="w").pack(side="left")
         self.lat_var = tk.StringVar(value="-0.1807")
-        lat_entry = tk.Entry(lat_frame, textvariable=self.lat_var, width=15)
-        lat_entry.pack(side="left", padx=(5, 10))
-        tk.Label(lat_frame, text="(Ej: -2.1709)", fg="gray").pack(side="left")
-        
-        # Longitud
-        lon_frame = tk.Frame(coords_frame)
-        lon_frame.pack(fill="x", pady=5)
-        tk.Label(lon_frame, text="Longitud:", width=12, anchor="w").pack(side="left")
         self.lon_var = tk.StringVar(value="-78.4678")
-        lon_entry = tk.Entry(lon_frame, textvariable=self.lon_var, width=15)
-        lon_entry.pack(side="left", padx=(5, 10))
-        tk.Label(lon_frame, text="(Ej: -79.9224)", fg="gray").pack(side="left")
         
-        # === SECCIÓN 3: DIRECCIÓN DE VISTA ===
-        direccion_frame = tk.LabelFrame(self.main_frame, text="🧭 Dirección de Vista", 
-                                      font=("Arial", 11, "bold"), padx=10, pady=10)
+        tk.Label(coords_frame, text="Latitud:").grid(row=0, column=0, sticky="w", pady=2)
+        tk.Entry(coords_frame, textvariable=self.lat_var, state="readonly").grid(row=0, column=1, sticky="ew")
+        tk.Label(coords_frame, text="Longitud:").grid(row=1, column=0, sticky="w", pady=2)
+        tk.Entry(coords_frame, textvariable=self.lon_var, state="readonly").grid(row=1, column=1, sticky="ew")
+        coords_frame.grid_columnconfigure(1, weight=1)
+
+        # --- NUEVA SECCIÓN: PARÁMETROS DE CÁMARA ---
+        cam_params_frame = tk.LabelFrame(controls_frame, text="📷 Parámetros de Cámara", font=("Arial", 11, "bold"), padx=10, pady=10)
+        cam_params_frame.pack(fill="x", pady=(0, 15))
+        
+        # ALTURA SOBRE EL TERRENO
+        self.altura_var = tk.DoubleVar(value=1.7) # Altura de una persona por defecto
+        tk.Label(cam_params_frame, text="Altura sobre el terreno (m):").grid(row=0, column=0, sticky="w", pady=4)
+        altura_spinbox = tk.Spinbox(cam_params_frame, from_=1.7, to=5000, increment=10, textvariable=self.altura_var, width=10)
+        altura_spinbox.grid(row=0, column=1, sticky="e")
+        
+        # CAMPO DE VISIÓN (ZOOM)
+        self.fov_var = tk.IntVar(value=60) # Zoom realista por defecto
+        tk.Label(cam_params_frame, text="Campo de Visión / Zoom (°):").grid(row=1, column=0, sticky="w", pady=4)
+        fov_scale = tk.Scale(cam_params_frame, from_=20, to=120, orient="horizontal", variable=self.fov_var)
+        fov_scale.grid(row=1, column=1, sticky="ew")
+        cam_params_frame.grid_columnconfigure(1, weight=1)
+        
+        # --- DIRECCIÓN DE VISTA (BRÚJULA INTERACTIVA) ---
+        direccion_frame = tk.LabelFrame(controls_frame, text="🧭 Dirección de Vista", font=("Arial", 11, "bold"), padx=10, pady=10)
         direccion_frame.pack(fill="x", pady=(0, 15))
         
-        # Azimut con slider
-        azimut_frame = tk.Frame(direccion_frame)
-        azimut_frame.pack(fill="x", pady=5)
+        self.azimut_var = tk.DoubleVar(value=135.0) # Apuntando al sureste por defecto (hacia Cotopaxi desde Quito)
+        self.azimut_label = tk.Label(direccion_frame, text="", font=("Arial", 10, "bold"))
+        self.azimut_label.pack()
+
+        self.compass_widget = Compass(direccion_frame, variable=self.azimut_var, command=self.actualizar_direccion_label)
+        self.compass_widget.pack(pady=5)
+        self.actualizar_direccion_label()
+
+        # --- CONTROLES ---
+        controles_frame = tk.LabelFrame(controls_frame, text="🎮 Acciones", font=("Arial", 11, "bold"), padx=10, pady=15)
+        controles_frame.pack(fill="x", pady=10)
         
-        tk.Label(azimut_frame, text="Azimut:", width=12, anchor="w").pack(side="left")
-        self.azimut_var = tk.IntVar(value=90)
-        azimut_scale = tk.Scale(azimut_frame, from_=0, to=359, orient="horizontal",
-                              variable=self.azimut_var, command=self.actualizar_direccion)
-        azimut_scale.pack(side="left", fill="x", expand=True, padx=(5, 10))
-        
-        self.direccion_label = tk.Label(azimut_frame, text="Este", fg="darkgreen", 
-                                      font=("Arial", 10, "bold"), width=10)
-        self.direccion_label.pack(side="right")
-        
-        # Botones de dirección rápida
-        botones_frame = tk.Frame(direccion_frame)
-        botones_frame.pack(pady=10)
-        
-        direcciones = [("Norte", 0), ("Este", 90), ("Sur", 180), ("Oeste", 270)]
-        for texto, valor in direcciones:
-            btn = tk.Button(botones_frame, text=texto, width=8,
-                          command=lambda v=valor: self.set_azimut(v))
-            btn.pack(side="left", padx=5)
-        
-        # === SECCIÓN 4: CONTROLES ===
-        # Frame de controles JUSTO DESPUÉS de dirección
-        controles_frame = tk.LabelFrame(self.main_frame, text="🎮 Controles", 
-                                      font=("Arial", 11, "bold"), padx=10, pady=15)
-        controles_frame.pack(fill="x", pady=20)
-        
-        # Botón generar vista - MÁS GRANDE Y VISIBLE
-        self.btn_generar = tk.Button(controles_frame, text="🏔️ GENERAR VISTA 3D", 
-                                   font=("Arial", 14, "bold"), bg="#4CAF50", fg="white",
-                                   command=self.generar_vista, height=2, relief="raised", bd=3)
+        self.btn_generar = tk.Button(controles_frame, text="🏔️ GENERAR VISTA 3D", font=("Arial", 14, "bold"), bg="#4CAF50", fg="white", command=self.generar_vista, height=2)
         self.btn_generar.pack(fill="x", padx=10, pady=5)
         
-        # Botón salir
-        btn_salir = tk.Button(controles_frame, text="❌ Salir", 
-                            font=("Arial", 10), bg="#f44336", fg="white",
-                            command=self.root.quit, height=1)
-        btn_salir.pack(fill="x", padx=10, pady=(5, 10))
+        # === COLUMNA DERECHA: MAPA INTERACTIVO ===
+        map_frame = tk.LabelFrame(main_pane, text="Haga clic en el mapa para seleccionar la ubicación", font=("Arial", 11, "bold"), padx=5, pady=5)
+        main_pane.add(map_frame)
         
-        # === SECCIÓN 5: INFORMACIÓN ACTUAL (MOVIDA ABAJO) ===
-        info_frame = tk.LabelFrame(self.main_frame, text="📊 Información", 
-                                 font=("Arial", 10), padx=10, pady=5)
-        info_frame.pack(fill="x", pady=(10, 0))
+        self.map_widget = tkintermapview.TkinterMapView(map_frame, width=550, height=750, corner_radius=0)
+        self.map_widget.pack(fill="both", expand=True)
+        self.map_widget.set_position(-0.1807, -78.4678) # Posición inicial en Quito
+        self.map_widget.set_zoom(10)
         
-        self.info_text = tk.Text(info_frame, height=3, wrap="word", state="disabled",
-                               bg="#f0f0f0", font=("Courier", 8))
-        self.info_text.pack(fill="x", pady=3)
-        
-        self.actualizar_info()
-        
-        # === ESPACIO FINAL ===
-        espacio_final = tk.Frame(self.main_frame, height=30, bg="white")
-        espacio_final.pack(fill="x", pady=10)
-        
-        # === STATUS BAR (FUERA DEL CANVAS) ===
-        self.status_var = tk.StringVar(value="✅ Listo para generar vista 3D")
-        status_bar = tk.Label(self.root, textvariable=self.status_var, 
-                            relief="sunken", anchor="w", bg="lightgray", height=1)
+        self.map_marker = self.map_widget.set_marker(-0.1807, -78.4678, text="Observador")
+        self.map_widget.add_left_click_map_command(self.map_click_callback)
+
+        # Status Bar
+        self.status_var = tk.StringVar(value="✅ Listo")
+        status_bar = tk.Label(self.root, textvariable=self.status_var, relief="sunken", anchor="w", bg="lightgray")
         status_bar.pack(side="bottom", fill="x")
-        
-        # Actualizar dirección inicial
-        self.actualizar_direccion()
-        
-        # Actualizar scroll region después de crear todo
-        self.main_frame.update_idletasks()
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-    
+
+    def map_click_callback(self, coords):
+        lat, lon = coords
+        self.lat_var.set(f"{lat:.6f}")
+        self.lon_var.set(f"{lon:.6f}")
+        self.map_marker.set_position(lat, lon)
+        self.status_var.set(f"Nuevas coordenadas seleccionadas: Lat {lat:.4f}, Lon {lon:.4f}")
+        self.ubicacion_var.set("Ubicación personalizada")
+
     def cargar_ubicacion(self, event=None):
-        """Carga una ubicación preconfigurada."""
-        ubicacion = self.ubicacion_var.get()
-        if ubicacion in self.ubicaciones:
-            lat, lon = self.ubicaciones[ubicacion]
+        ubicacion_nombre = self.ubicacion_var.get()
+        if ubicacion_nombre in self.ubicaciones:
+            lat, lon = self.ubicaciones[ubicacion_nombre]
             self.lat_var.set(str(lat))
             self.lon_var.set(str(lon))
-            self.actualizar_info()
-            self.status_var.set(f"📍 Ubicación cargada: {ubicacion}")
-    
-    def set_azimut(self, valor):
-        """Establece el azimut usando botones rápidos."""
-        self.azimut_var.set(valor)
-        self.actualizar_direccion()
-    
-    def actualizar_direccion(self, event=None):
-        """Actualiza la etiqueta de dirección cardinal."""
+            self.map_widget.set_position(lat, lon)
+            self.map_marker.set_position(lat, lon)
+            self.status_var.set(f"📍 Ubicación cargada: {ubicacion_nombre}")
+
+    def actualizar_direccion_label(self, event=None):
         azimut = self.azimut_var.get()
         direccion = self.obtener_direccion_cardinal(azimut)
-        self.direccion_label.config(text=direccion)
-        self.actualizar_info()
-    
+        self.azimut_label.config(text=f"Azimut: {azimut:.1f}° ({direccion})")
+
     def obtener_direccion_cardinal(self, angulo):
-        """Convierte ángulo a dirección cardinal."""
-        angulo = angulo % 360
-        if angulo < 22.5 or angulo >= 337.5:
-            return "Norte"
-        elif angulo < 67.5:
-            return "Noreste"
-        elif angulo < 112.5:
-            return "Este"
-        elif angulo < 157.5:
-            return "Sureste"
-        elif angulo < 202.5:
-            return "Sur"
-        elif angulo < 247.5:
-            return "Suroeste"
-        elif angulo < 292.5:
-            return "Oeste"
-        else:
-            return "Noroeste"
-    
-    def actualizar_info(self):
-        """Actualiza el panel de información."""
-        try:
-            lat = float(self.lat_var.get())
-            lon = float(self.lon_var.get())
-            azimut = self.azimut_var.get()
-            direccion = self.obtener_direccion_cardinal(azimut)
-            
-            info = f"""📍 Lat: {lat:.6f}°, Lon: {lon:.6f}°
-🧭 Azimut: {azimut}° ({direccion})
-⚙️ Radio: 150km | Campo: 90° | Altura: Terreno+1.7m"""
-            
-            self.info_text.config(state="normal")
-            self.info_text.delete(1.0, "end")
-            self.info_text.insert(1.0, info)
-            self.info_text.config(state="disabled")
-            
-        except ValueError:
-            self.info_text.config(state="normal")
-            self.info_text.delete(1.0, "end")
-            self.info_text.insert(1.0, "❌ Coordenadas inválidas")
-            self.info_text.config(state="disabled")
-    
+        direcciones = ["Norte", "Noreste", "Este", "Sureste", "Sur", "Suroeste", "Oeste", "Noroeste"]
+        indice = round(angulo / 45) % 8
+        return direcciones[indice]
+
     def validar_coordenadas(self):
-        """Valida que las coordenadas sean correctas."""
+        # La validación ahora es menos crítica ya que se eligen del mapa
         try:
             lat = float(self.lat_var.get())
             lon = float(self.lon_var.get())
-            
-            # Validar rangos para Ecuador
-            if not (-5 <= lat <= 2):
-                messagebox.showerror("Error", "Latitud debe estar entre -5° y 2° (Ecuador)")
+            if not (-8 <= lat < 4):
+                messagebox.showerror("Error", "Latitud fuera del rango de datos de Ecuador.")
                 return False
-            
-            if not (-82 <= lon <= -75):
-                messagebox.showerror("Error", "Longitud debe estar entre -82° y -75° (Ecuador)")
+            if not (-82 <= lon < -72):
+                messagebox.showerror("Error", "Longitud fuera del rango de datos de Ecuador.")
                 return False
-            
             return True
-            
         except ValueError:
-            messagebox.showerror("Error", "Coordenadas deben ser números válidos")
+            messagebox.showerror("Error", "Coordenadas inválidas.")
             return False
-    
-    def generar_vista_thread(self, lat, lon, azimut):
-        """Genera la vista 3D en un hilo separado."""
+
+    def generar_vista_thread(self, lat, lon, azimut, altura, fov):
         try:
-            self.status_var.set("🔄 Generando vista 3D...")
+            self.status_var.set("🔄 Generando vista 3D... Esto puede tardar unos segundos.")
             self.btn_generar.config(state="disabled", text="⏳ Generando...")
             
-            # Crear viewer si no existe
             if self.viewer is None:
                 self.viewer = HorizonteViewer3D_GUI()
             
-            # Generar vista
-            self.vista_actual = self.viewer.vista_3d_realista(
-                lat, lon, azimut, campo_vision=90, radio_km=150
+            # Pasar los nuevos parámetros al visualizador
+            self.viewer.vista_3d_realista(
+                lat_observador=lat, 
+                lon_observador=lon, 
+                azimut=azimut, 
+                campo_vision=fov, 
+                altura_sobre_terreno=altura,
+                radio_km=150
             )
             
-            self.status_var.set("✅ Vista 3D generada exitosamente")
-            self.btn_generar.config(state="normal", text="🏔️ Generar Vista 3D")
-            
+            self.status_var.set("✅ Vista 3D generada exitosamente. Puede cerrar la ventana 3D.")
         except Exception as e:
-            self.status_var.set(f"❌ Error: {str(e)}")
-            self.btn_generar.config(state="normal", text="🏔️ Generar Vista 3D")
-            messagebox.showerror("Error", f"No se pudo generar la vista 3D:\n{str(e)}")
-    
+            self.status_var.set(f"❌ Error: {e}")
+            messagebox.showerror("Error al Generar Vista", f"No se pudo generar la vista 3D:\n\n{e}")
+        finally:
+            self.btn_generar.config(state="normal", text="🏔️ GENERAR VISTA 3D")
+
     def generar_vista(self):
-        """Inicia la generación de la vista 3D."""
         if not self.validar_coordenadas():
             return
         
         lat = float(self.lat_var.get())
         lon = float(self.lon_var.get())
         azimut = self.azimut_var.get()
+        altura = self.altura_var.get()
+        fov = self.fov_var.get()
         
-        # Confirmar acción
-        respuesta = messagebox.askyesno(
-            "Generar Vista 3D",
-            f"¿Generar vista 3D para:\n\n"
-            f"📍 Latitud: {lat:.6f}°\n"
-            f"📍 Longitud: {lon:.6f}°\n"
-            f"🧭 Dirección: {azimut}° ({self.obtener_direccion_cardinal(azimut)})\n\n"
-            f"Esto abrirá una ventana 3D separada."
-        )
-        
-        if respuesta:
-            # Ejecutar en hilo separado para no bloquear la GUI
+        msg = (f"¿Generar vista con los siguientes parámetros?\n\n"
+               f"📍 Lat: {lat:.4f}°, Lon: {lon:.4f}°\n"
+               f"🧭 Dirección: {azimut:.1f}° ({self.obtener_direccion_cardinal(azimut)})\n"
+               f"↕️ Altura sobre terreno: {altura:.1f} m\n"
+               f"👁️ Campo de Visión: {fov}°\n\n"
+               f"La simulación se abrirá en una nueva ventana.")
+
+        if messagebox.askyesno("Confirmar Simulación", msg):
             thread = threading.Thread(
                 target=self.generar_vista_thread,
-                args=(lat, lon, azimut),
+                args=(lat, lon, azimut, altura, fov),
                 daemon=True
             )
             thread.start()
     
     def ejecutar(self):
-        """Ejecuta la interfaz gráfica."""
-        try:
-            self.root.mainloop()
-        except KeyboardInterrupt:
-            print("Interfaz cerrada por el usuario")
-
+        self.root.mainloop()
 
 def main():
     """Función principal para ejecutar la GUI."""
