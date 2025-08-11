@@ -27,10 +27,14 @@ class SimuladorHorizonte:
         self.longitudes_disponibles = []
         
     def generar_nombre_hgt(self, lat, lon):
-        """Genera el nombre del archivo .hgt para una coordenada."""
-        lat_label = 'N' if lat >= 0 else 'S'
-        lon_label = 'E' if lon >= 0 else 'W'
-        return f"{lat_label}{abs(int(lat)):02d}{lon_label}{abs(int(lon)):03d}.hgt"
+        # Se usa math.floor() para encontrar la esquina inferior izquierda
+        lat_base = math.floor(lat)
+        lon_base = math.floor(lon)
+        
+        lat_label = 'N' if lat_base >= 0 else 'S'
+        lon_label = 'E' if lon_base >= 0 else 'W'
+        
+        return f"{lat_label}{abs(int(lat_base)):02d}{lon_label}{abs(int(lon_base)):03d}.hgt"
     
     def cargar_hgt(self, path_archivo):
         """Carga un archivo .hgt individual."""
@@ -124,46 +128,46 @@ class SimuladorHorizonte:
         if self.matriz_terreno is None:
             self.cargar_terreno_ecuador()
         
-        # Encontrar en qué archivo .hgt está la coordenada
         lat_archivo = None
         lon_archivo = None
         
         # Encontrar la latitud del archivo correspondiente
         for lat_disp in self.latitudes_disponibles:
+            # El rango de un archivo hgt es [lat_disp, lat_disp+1)
             if lat_disp <= lat < lat_disp + 1:
                 lat_archivo = lat_disp
                 break
         
-        # Encontrar la longitud del archivo correspondiente  
+        # Encontrar la longitud del archivo correspondiente
         for lon_disp in self.longitudes_disponibles:
+            # El rango de un archivo hgt es [lon_disp, lon_disp+1)
             if lon_disp <= lon < lon_disp + 1:
                 lon_archivo = lon_disp
                 break
         
         if lat_archivo is None or lon_archivo is None:
             raise ValueError(f"Coordenada ({lat}, {lon}) fuera del rango de datos disponibles")
-        
+
         # Calcular índices dentro del archivo específico
-        lat_rel = lat - lat_archivo  # Posición relativa dentro del grado
-        lon_rel = lon - lon_archivo  # Posición relativa dentro del grado
-        
+        lat_rel = lat - lat_archivo
+        lon_rel = lon - lon_archivo
+
         # Convertir a índices dentro del archivo (1201x1201)
-        fila_archivo = int(lat_rel * (self.resolucion - 1))
+        # La orientación de los archivos .hgt ya está de Norte a Sur,
+        # no se necesita inversión.
+        fila_archivo = int((self.resolucion - 1) - lat_rel * (self.resolucion - 1))
         col_archivo = int(lon_rel * (self.resolucion - 1))
-        
-        # Para archivos con latitud negativa, la fila se invierte
-        if lat_archivo < 0:
-            fila_archivo = (self.resolucion - 1) - fila_archivo
-        
+
         # Encontrar la posición del archivo en la matriz global
         indice_lat_archivo = self.latitudes_disponibles.index(lat_archivo)
         indice_lon_archivo = self.longitudes_disponibles.index(lon_archivo)
-        
-        # Calcular índices globales considerando los recortes de bordes
+
+        # Calcular índices globales
         fila_global = indice_lat_archivo * (self.resolucion - 1) + fila_archivo
         col_global = indice_lon_archivo * (self.resolucion - 1) + col_archivo
         
         return fila_global, col_global
+
     
     def indices_a_coordenadas(self, i, j):
         """Convierte índices de matriz a coordenadas geográficas."""
@@ -175,7 +179,7 @@ class SimuladorHorizonte:
         indice_archivo_lon = j // (self.resolucion - 1)
         
         # Obtener coordenadas del archivo
-        if (indice_archivo_lat < len(self.latitudes_disponibles) and 
+        if (indice_archivo_lat < len(self.latitudes_disponibles) and
             indice_archivo_lon < len(self.longitudes_disponibles)):
             
             lat_archivo = self.latitudes_disponibles[indice_archivo_lat]
@@ -185,13 +189,9 @@ class SimuladorHorizonte:
             fila_archivo = i % (self.resolucion - 1)
             col_archivo = j % (self.resolucion - 1)
             
-            # Convertir a coordenadas
-            lat_rel = fila_archivo / (self.resolucion - 1)
+            # Convertir a coordenadas. La inversión ya no es necesaria
+            lat_rel = (self.resolucion - 1 - fila_archivo) / (self.resolucion - 1)
             lon_rel = col_archivo / (self.resolucion - 1)
-            
-            # Para archivos con latitud negativa, invertir
-            if lat_archivo < 0:
-                lat_rel = 1 - lat_rel
             
             lat = lat_archivo + lat_rel
             lon = lon_archivo + lon_rel
