@@ -110,21 +110,46 @@ class HorizonteGUI:
 
     def crear_interfaz(self):
         # Frame principal para dividir en dos columnas: controles (izquierda) y mapa (derecha)
-        main_pane = tk.PanedWindow(self.root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        # Status Bar
+        self.status_var = tk.StringVar(value="✅ Listo")
+        status_bar = tk.Label(self.root, textvariable=self.status_var, relief="sunken", anchor="w", bg="lightgray")
+        status_bar.pack(side="top", fill="x")
+        
+        
+        main_pane = tk.PanedWindow(self.root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)     
         main_pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # === COLUMNA IZQUIERDA: CONTROLES ===
-        controls_frame = tk.Frame(main_pane, width=400)
-        main_pane.add(controls_frame, stretch="never")
+        # === COLUMNA IZQUIERDA: CONTROLES CON SCROLLBAR VERTICAL ===
+        controls_container = tk.Frame(main_pane, width=400)
+        main_pane.add(controls_container, stretch="never")
+
+        canvas = tk.Canvas(controls_container, borderwidth=0, highlightthickness=0)
+        scrollbar = tk.Scrollbar(controls_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # === CONTENIDO DE LA COLUMNA IZQUIERDA (antes en controls_frame) ===
 
         # Título
-        titulo = tk.Label(controls_frame, text="Configuración de Vista", font=("Arial", 16, "bold"), fg="darkblue")
+        titulo = tk.Label(scrollable_frame, text="Configuración de Vista", font=("Arial", 16, "bold"), fg="darkblue")
         titulo.pack(pady=(5, 15), anchor="w")
 
         # --- UBICACIONES PRECONFIGURADAS ---
-        ubicaciones_frame = tk.LabelFrame(controls_frame, text="📍 Ubicaciones Preconfiguradas", font=("Arial", 11, "bold"), padx=10, pady=10)
+        ubicaciones_frame = tk.LabelFrame(scrollable_frame, text="📍 Ubicaciones Preconfiguradas", font=("Arial", 11, "bold"), padx=10, pady=10)
         ubicaciones_frame.pack(fill="x", pady=(0, 15))
-        
+
         self.ubicaciones = {
             "Quito - Vista hacia Cotopaxi": (-0.1807, -78.4678),
             "Guayaquil - Vista hacia cordillera": (-2.1709, -79.9224),
@@ -142,11 +167,11 @@ class HorizonteGUI:
         ubicacion_combo.bind("<<ComboboxSelected>>", self.cargar_ubicacion)
 
         # --- COORDENADAS (AHORA SOLO LECTURA, ACTUALIZADO POR EL MAPA) ---
-        coords_frame = tk.LabelFrame(controls_frame, text="🗺️ Coordenadas (Seleccionadas en el mapa)", font=("Arial", 11, "bold"), padx=10, pady=10)
+        coords_frame = tk.LabelFrame(scrollable_frame, text="🗺️ Coordenadas (Seleccionadas en el mapa)", font=("Arial", 11, "bold"), padx=10, pady=10)
         coords_frame.pack(fill="x", pady=(0, 15))
         self.lat_var = tk.StringVar(value="-0.1807")
         self.lon_var = tk.StringVar(value="-78.4678")
-        
+
         tk.Label(coords_frame, text="Latitud:").grid(row=0, column=0, sticky="w", pady=2)
         tk.Entry(coords_frame, textvariable=self.lat_var, state="readonly").grid(row=0, column=1, sticky="ew")
         tk.Label(coords_frame, text="Longitud:").grid(row=1, column=0, sticky="w", pady=2)
@@ -154,27 +179,27 @@ class HorizonteGUI:
         coords_frame.grid_columnconfigure(1, weight=1)
 
         # --- NUEVA SECCIÓN: PARÁMETROS DE CÁMARA ---
-        cam_params_frame = tk.LabelFrame(controls_frame, text="📷 Parámetros de Cámara", font=("Arial", 11, "bold"), padx=10, pady=10)
+        cam_params_frame = tk.LabelFrame(scrollable_frame, text="📷 Parámetros de Cámara", font=("Arial", 11, "bold"), padx=10, pady=10)
         cam_params_frame.pack(fill="x", pady=(0, 15))
-        
+
         # ALTURA SOBRE EL TERRENO
-        self.altura_var = tk.DoubleVar(value=1.7) # Altura de una persona por defecto
+        self.altura_var = tk.DoubleVar(value=1.7)  # Altura de una persona por defecto
         tk.Label(cam_params_frame, text="Altura sobre el terreno (m):").grid(row=0, column=0, sticky="w", pady=4)
-        altura_spinbox = tk.Spinbox(cam_params_frame, from_=1.7, to=5000, increment=10, textvariable=self.altura_var, width=10)
+        altura_spinbox = tk.Spinbox(cam_params_frame, from_=0, to=500, increment=1, textvariable=self.altura_var, width=10)
         altura_spinbox.grid(row=0, column=1, sticky="e")
-        
+
         # CAMPO DE VISIÓN (ZOOM)
-        self.fov_var = tk.IntVar(value=60) # Zoom realista por defecto
+        self.fov_var = tk.IntVar(value=60)  # Zoom realista por defecto
         tk.Label(cam_params_frame, text="Campo de Visión / Zoom (°):").grid(row=1, column=0, sticky="w", pady=4)
         fov_scale = tk.Scale(cam_params_frame, from_=20, to=120, orient="horizontal", variable=self.fov_var)
         fov_scale.grid(row=1, column=1, sticky="ew")
         cam_params_frame.grid_columnconfigure(1, weight=1)
-        
+
         # --- DIRECCIÓN DE VISTA (BRÚJULA INTERACTIVA) ---
-        direccion_frame = tk.LabelFrame(controls_frame, text="🧭 Dirección de Vista", font=("Arial", 11, "bold"), padx=10, pady=10)
+        direccion_frame = tk.LabelFrame(scrollable_frame, text="🧭 Dirección de Vista", font=("Arial", 11, "bold"), padx=10, pady=10)
         direccion_frame.pack(fill="x", pady=(0, 15))
-        
-        self.azimut_var = tk.DoubleVar(value=135.0) # Apuntando al sureste por defecto (hacia Cotopaxi desde Quito)
+
+        self.azimut_var = tk.DoubleVar(value=0.0)  # Apuntando al Norte por defecto
         self.azimut_label = tk.Label(direccion_frame, text="", font=("Arial", 10, "bold"))
         self.azimut_label.pack()
 
@@ -183,28 +208,55 @@ class HorizonteGUI:
         self.actualizar_direccion_label()
 
         # --- CONTROLES ---
-        controles_frame = tk.LabelFrame(controls_frame, text="🎮 Acciones", font=("Arial", 11, "bold"), padx=10, pady=15)
+        controles_frame = tk.LabelFrame(scrollable_frame, text="🎮 Acciones", font=("Arial", 11, "bold"), padx=10, pady=15)
         controles_frame.pack(fill="x", pady=10)
-        
+
         self.btn_generar = tk.Button(controles_frame, text="🏔️ GENERAR VISTA 3D", font=("Arial", 14, "bold"), bg="#4CAF50", fg="white", command=self.generar_vista, height=2)
         self.btn_generar.pack(fill="x", padx=10, pady=5)
-        
-        # === COLUMNA DERECHA: MAPA INTERACTIVO ===
-        map_frame = tk.LabelFrame(main_pane, text="Haga clic en el mapa para seleccionar la ubicación", font=("Arial", 11, "bold"), padx=5, pady=5)
-        main_pane.add(map_frame)
-        
-        self.map_widget = tkintermapview.TkinterMapView(map_frame, width=550, height=750, corner_radius=0)
+
+        # === COLUMNA DERECHA: MAPA INTERACTIVO y cuadro de información ===
+        right_frame = tk.Frame(main_pane)
+        main_pane.add(right_frame, stretch="always")
+
+        right_frame.grid_rowconfigure(0, weight=6)  # 60%
+        right_frame.grid_rowconfigure(1, weight=4)  # 40%
+        right_frame.grid_columnconfigure(0, weight=1)
+
+        # Mapa
+        map_frame = tk.LabelFrame(right_frame, text="Haga clic en el mapa para seleccionar la ubicación", font=("Arial", 11, "bold"), padx=5, pady=5)
+        map_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+        self.map_widget = tkintermapview.TkinterMapView(map_frame, width=550, height=450, corner_radius=0)
         self.map_widget.pack(fill="both", expand=True)
-        self.map_widget.set_position(-0.1807, -78.4678) # Posición inicial en Quito
+        self.map_widget.set_position(-0.1807, -78.4678)  # Quito inicial
         self.map_widget.set_zoom(10)
-        
+
         self.map_marker = self.map_widget.set_marker(-0.1807, -78.4678, text="Observador")
         self.map_widget.add_left_click_map_command(self.map_click_callback)
 
-        # Status Bar
-        self.status_var = tk.StringVar(value="✅ Listo")
-        status_bar = tk.Label(self.root, textvariable=self.status_var, relief="sunken", anchor="w", bg="lightgray")
-        status_bar.pack(side="bottom", fill="x")
+        # Cuadro de información con scrollbar
+        info_frame = tk.LabelFrame(right_frame, text="📋 Información", font=("Arial", 11, "bold"), padx=5, pady=5)
+        info_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+
+        info_canvas = tk.Canvas(info_frame, borderwidth=0, highlightthickness=0)
+        info_canvas.pack(side="left", fill="both", expand=True)
+
+        scrollbar_info = tk.Scrollbar(info_frame, orient="vertical", command=info_canvas.yview)
+        scrollbar_info.pack(side="right", fill="y")
+
+        info_canvas.configure(yscrollcommand=scrollbar_info.set)
+
+        self.info_content = tk.Frame(info_canvas)
+        info_canvas.create_window((0, 0), window=self.info_content, anchor="nw")
+
+        def on_info_frame_configure(event):
+            info_canvas.configure(scrollregion=info_canvas.bbox("all"))
+
+        self.info_content.bind("<Configure>", on_info_frame_configure)
+
+        # Ejemplo texto inicial largo para info
+        self.info_label = tk.Label(self.info_content, text="Aquí se mostrará la información detallada.\n", justify="left", anchor="nw")
+        self.info_label.pack(fill="both", expand=True)
 
     def map_click_callback(self, coords):
         lat, lon = coords
@@ -250,6 +302,23 @@ class HorizonteGUI:
             messagebox.showerror("Error", "Coordenadas inválidas.")
             return False
 
+    def validar_altura(self):
+        try:
+            altura = float(self.altura_var.get())
+            if altura < 0 or altura > 500:   
+                messagebox.showerror("Error", "Altura debe estar entre 0 m y 500 m.")
+                return False    
+            return True
+        except ValueError:
+            messagebox.showerror("Error", "Altura inválida.")
+            return False
+        
+    def actualizar_info(self, texto):
+        """Actualiza el cuadro de información con texto formateado."""
+        self.info_label.config(text=texto)
+        # Forzar refresco del scroll region
+        self.info_content.update_idletasks()
+    
     def generar_vista_thread(self, lat, lon, azimut, altura, fov):
         try:
             self.status_var.set("🔄 Generando vista 3D... Esto puede tardar unos segundos.")
@@ -259,7 +328,7 @@ class HorizonteGUI:
                 self.viewer = HorizonteViewer3D_GUI()
             
             # Pasar los nuevos parámetros al visualizador
-            self.viewer.vista_3d_realista(
+            info_gui = self.viewer.vista_3d_realista(
                 lat_observador=lat, 
                 lon_observador=lon, 
                 azimut=azimut, 
@@ -267,6 +336,19 @@ class HorizonteGUI:
                 altura_sobre_terreno=altura,
                 radio_km=150
             )
+            info_text = (
+                f"📍 Coordenadas: Lat {info_gui['coordenadas'][0]:.6f}°, Lon {info_gui['coordenadas'][1]:.6f}°\n"
+                f"🧭 Dirección: {info_gui['azimut_actual'][0]:.1f}° ({info_gui['direccion_cardinal']})\n"
+                f"↕️ Altura observador: {info_gui['altura_observador']:.2f} m\n"
+                f"📏 Radio terreno simulado: {info_gui['radio_km']} km\n"
+                f"📊 Puntos renderizados: {info_gui['puntos_terreno']:,}\n"
+                f"⛰️ Elevación máxima: {info_gui['elevacion_max']:.0f} m\n"
+                f"🌄 Elevación mínima: {info_gui['elevacion_min']:.0f} m\n"
+                f"⌨️ Controles: ← → (rotar), + - (zoom)\n"
+            )
+
+            # Actualizar info en GUI (en hilo principal)
+            self.root.after(0, self.actualizar_info, info_text)
             
             self.status_var.set("✅ Vista 3D generada exitosamente. Puede cerrar la ventana 3D.")
         except Exception as e:
@@ -284,6 +366,9 @@ class HorizonteGUI:
         azimut = self.azimut_var.get()
         altura = self.altura_var.get()
         fov = self.fov_var.get()
+        
+        if not self.validar_altura():
+            return
         
         msg = (f"¿Generar vista con los siguientes parámetros?\n\n"
                f"📍 Lat: {lat:.4f}°, Lon: {lon:.4f}°\n"
