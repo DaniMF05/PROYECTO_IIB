@@ -101,7 +101,7 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             win_width, win_height = plotter.window_size
             width, height = img.size
             actor2d.GetPositionCoordinate().SetCoordinateSystemToDisplay()
-            actor2d.SetPosition(win_width - width - margin -50 , win_height -height - margin -130)  # margen abajo
+            actor2d.SetPosition(win_width - width - margin -50 , win_height -height - margin -145)  # margen abajo
 
             # 7. Añadir actor al renderer
             plotter.renderer.AddActor2D(actor2d)
