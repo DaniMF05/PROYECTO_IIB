@@ -142,6 +142,8 @@ Nota: el ratón está deshabilitado en esta versión para evitar conflictos; tod
 - Asegúrate de usar una versión que reajusta el `clipping_range` al cambiar el FOV.
 
 ## Autores
+Este proyecto es un trabajo académico de Métodos Numéricos en la Escuela Politécnica Nacional.
+
 - Daniel Menendez
 - Jesua Villacis
 - Celeste Gallardo
