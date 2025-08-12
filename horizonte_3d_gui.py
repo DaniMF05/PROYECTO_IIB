@@ -24,7 +24,7 @@ import math
 import pyvista as pv
 from pyvista import Actor
 import vtk
-from vtk.util import numpy_support 
+from vtk.util import numpy_support  # type: ignore
 from PIL import Image
 from simulador_horizonte_corregido import SimuladorHorizonte
 
