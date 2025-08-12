@@ -1,226 +1,147 @@
 # 🏔️ Visualizador 3D de Horizonte - Ecuador
 
-**Proyecto de Métodos Numéricos - Cuarto Semestre**
+Proyecto académico que genera vistas 3D del horizonte desde cualquier punto del Ecuador continental usando datos SRTM (.hgt) y un render interactivo con PyVista.
 
-Un visualizador 3D interactivo que permite generar vistas realistas del horizonte desde cualquier punto del Ecuador continental, utilizando datos de elevación digital del terreno (archivos .hgt).
-
-![Vista del Horizonte](https://img.shields.io/badge/Status-Funcional-brightgreen)
-![Python](https://img.shields.io/badge/Python-3.7+-blue)
+![Estado](https://img.shields.io/badge/Estado-Activa-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![GUI](https://img.shields.io/badge/GUI-Tkinter-orange)
 ![3D](https://img.shields.io/badge/3D-PyVista-red)
 
-## 📋 Tabla de Contenidos
+## 📋 Contenido
 
-- [Características](#-características)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Instalación](#-instalación)
-- [Uso Rápido](#-uso-rápido)
-- [Arquitectura del Código](#-arquitectura-del-código)
-- [Ejemplos de Uso](#-ejemplos-de-uso)
-- [Troubleshooting](#-troubleshooting)
-
+- Características
+- Estructura del proyecto
+- Instalación (Windows/PowerShell)
+- Uso rápido
+- Cómo funciona (flujo y arquitectura)
+- Controles 3D y HUD
+- Requisitos de datos (.hgt)
+- Solución de problemas
+- Estado actual y tareas pendientes
 
 ## ✨ Características
 
-- **🗺️ Interfaz Gráfica Intuitiva**: Control completo desde una GUI con Tkinter
-- **📍 Ubicaciones Preconfiguradas**: 9 ubicaciones emblemáticas del Ecuador
-- **🧭 Control de Dirección**: Selector de azimut (0-359°) con direcciones cardinales
-- **🏔️ Visualización 3D Realista**: Renderizado con PyVista sin exageración vertical
-- **⚡ Multithreading**: Generación no bloqueante de vistas 3D
-- **📏 Configuración Flexible**: Radio de visualización hasta 150km
-- **🎨 Mapeo de Colores Realista**: Colores basados en elevación del terreno
+- Interfaz gráfica con mapa interactivo para elegir coordenadas (tkinter + tkintermapview)
+- Motor 3D con PyVista/VTK, malla estructurada del terreno y colores por elevación
+- Selección de dirección (azimut) mediante una brújula interactiva; muestra dirección cardinal
+- Parámetros de cámara configurables: altura sobre el terreno y campo de visión (FOV)
+- HUD en la ventana 3D con información actual (FOV, dirección, etc.)
+- Radio del terreno simulado de hasta ~150 km alrededor del observador
 
-## 🗂️ Estructura del Proyecto
+## 🗂️ Estructura del proyecto
 
-```
+```text
 PROYECTO_IIB_REPOSITORIO/
-├── gui_horizonte.py              # 🎮 APLICACIÓN PRINCIPAL - Ejecutar este archivo
-├── horizonte_3d_gui.py           # 🎨 Motor de visualización 3D (PyVista)
-├── simulador_horizonte_corregido.py # 🧮 Clase base - Procesamiento de datos
-├── horizonte_3d_final.py         # 🔧 Versión standalone (opcional)
-├── Matrices/                     # 📊 Datos de elevación (.hgt)
-│   ├── N00W073.hgt
-│   ├── N01W074.hgt
-│   └── ... (archivos de terreno)
-└── README.md                     # 📖 Esta documentación
+├── gui_horizonte.py                  # Aplicación principal (GUI, mapa, formularios, estado)
+├── horizonte_3d_gui.py               # Visualizador 3D (PyVista) para la GUI
+├── simulador_horizonte_corregido.py  # Capa de datos: carga y mosaico de HGT, utilidades
+├── Matrices/                         # Archivos .hgt (SRTM) para Ecuador
+└── README.md
 ```
 
-### 📁 Descripción de Archivos
+## � Instalación (Windows / PowerShell)
 
-| Archivo | Propósito | Estado |
-|---------|-----------|--------|
-| `gui_horizonte.py` | **APLICACIÓN PRINCIPAL** - Interfaz gráfica | ✅ Activo |
-| `horizonte_3d_gui.py` | Motor de renderizado 3D para GUI | ✅ Activo |
-| `simulador_horizonte_corregido.py` | Clase base para procesamiento de datos | ✅ Activo |
+1) Requisitos
 
-## 🚀 Instalación
+- Python 3.11 o superior (se ha probado con 3.11/3.12)
+- OpenGL/Drivers actualizados (necesario para VTK)
 
-### Prerrequisitos
+1) Instalar dependencias
 
-- **Python 3.7 o superior**
-- **Sistema Operativo**: Windows, Linux, macOS
-
-### 1. Clonar el Repositorio
-
-```bash
-git clone https://github.com/tu-usuario/proyecto-horizonte-3d.git
-cd proyecto-horizonte-3d
-```
-
-### 2. Instalar Dependencias
-
-```bash
-# Instalar dependencias principales
-pip install numpy matplotlib pyvista tkinter
-
-# O usando requirements (si está disponible)
+```powershell
+cd C:\DANIMF\WORKCENTER\CUARTO_SEMESTRE\METODOS_NUMERICOS\PROYECTO_IIB_REPOSITORIO
 pip install -r requirements.txt
 ```
 
-### 3. Verificar Instalación
+Si VTK falla al instalarse, actualiza pip y wheel, e inténtalo de nuevo:
 
-```bash
-python -c "import numpy, matplotlib, pyvista, tkinter; print('✅ Todas las dependencias instaladas correctamente')"
+```powershell
+python -m pip install --upgrade pip wheel
+pip install -r requirements.txt
 ```
 
-## 🎯 Uso Rápido
+1) Datos de terreno (.hgt)
 
-### Ejecutar la Aplicación
+- Copia los archivos .hgt en la carpeta `Matrices/` siguiendo el patrón SRTM (p. ej. `S01W079.hgt`).
+- El proyecto ya incluye una selección de archivos para Ecuador; verifica que existan.
 
-```bash
-# Navegar al directorio del proyecto
-cd PROYECTO_IIB_REPOSITORIO
+## 🎯 Uso rápido
 
-# Ejecutar la aplicación principal
+Ejecuta la GUI:
+
+```powershell
 python gui_horizonte.py
 ```
 
-### Pasos para Generar una Vista
+Pasos en la aplicación:
 
-1. **Abrir la aplicación**: Ejecutar `python gui_horizonte.py`
-2. **Seleccionar ubicación**: 
-   - Usar el menú desplegable para ubicaciones preconfiguradas, O
-   - Ingresar coordenadas manualmente (Lat: -5° a 2°, Lon: -82° a -75°)
-3. **Configurar dirección**: Ajustar el azimut (0°=Norte, 90°=Este, etc.)
-4. **Generar vista**: Hacer clic en "🏔️ GENERAR VISTA 3D"
-5. **Explorar**: La ventana 3D se abrirá con controles interactivos
+1. Selecciona ubicación en el mapa o desde el listado preconfigurado.
+2. Ajusta azimut en la brújula y, si deseas, la altura y el FOV.
+3. Pulsa “🏔️ GENERAR VISTA 3D” y espera a que aparezca la ventana 3D.
 
-## 🏗️ Arquitectura del Código
+## 🧠 Cómo funciona (flujo y arquitectura)
 
-### Diagrama de Dependencias
+Resumen del flujo de datos y control:
 
-```
-gui_horizonte.py (INTERFAZ PRINCIPAL)
-    ↓ importa
-horizonte_3d_gui.py (VISUALIZADOR 3D)
-    ↓ hereda de
-simulador_horizonte_corregido.py (PROCESADOR DE DATOS)
-```
+1) Carga y mosaico de HGT — `SimuladorHorizonte` (simulador_horizonte_corregido.py)
 
-### Clases Principales
+- Busca en `Matrices/` los tiles SRTM disponibles dentro de un rango fijo (latitudes 3..-8, longitudes -82..-73).
+- Carga cada archivo .hgt (1201×1201, enteros big-endian), recorta los bordes compartidos y construye una gran matriz continua del terreno de Ecuador.
+- Expone utilidades para convertir entre coordenadas geográficas (lat/lon) e índices de la matriz global.
 
-#### 1. `HorizonteGUI` (gui_horizonte.py)
-- **Responsabilidad**: Interfaz gráfica principal
-- **Componentes**: Tkinter widgets, validación, threading
-- **Métodos clave**: `crear_interfaz()`, `generar_vista()`, `validar_coordenadas()`
+1) Interfaz y parámetros — `HorizonteGUI` (gui_horizonte.py)
 
-#### 2. `HorizonteViewer3D_GUI` (horizonte_3d_gui.py)
-- **Responsabilidad**: Renderizado 3D con PyVista
-- **Hereda de**: `SimuladorHorizonte`
-- **Métodos clave**: `vista_3d_realista()`, `_vista_pyvista_gui()`
+- Tkinter arma la ventana: mapa interactivo (tkintermapview), formularios y una brújula para el azimut.
+- Cuando pulsas “Generar”, recoge lat/lon (del mapa), azimut, altura y FOV y llama al visualizador 3D.
+- Muestra en un panel de información los resultados devueltos por el motor 3D (coordenadas, elevaciones, puntos, etc.).
 
-#### 3. `SimuladorHorizonte` (simulador_horizonte_corregido.py)
-- **Responsabilidad**: Procesamiento de datos de terreno
-- **Funciones**: Carga de archivos .hgt, conversión de coordenadas
-- **Métodos clave**: `cargar_terreno_ecuador()`, `coordenadas_a_indices()`
+1) Render 3D — `HorizonteViewer3D_GUI` (horizonte_3d_gui.py)
 
-## 📍 Ejemplos de Uso
+- Hereda de `SimuladorHorizonte` para reutilizar la matriz de elevaciones.
+- Recorta una región alrededor del observador (hasta ~150 km) y submuestrea para rendimiento (hasta ~2000 puntos).
+- Construye una malla `StructuredGrid` (X/Y en km, Z en km) y asigna colores por elevación.
+- Configura cámara: posición en el observador (Z = altura terreno + altura usuario), `focal_point` a la dirección del azimut, `up=[0,0,1]`, y `view_angle=FOV`.
+- Ajusta el “clipping range” para evitar que el terreno cercano desaparezca al hacer zoom.
+- Registra eventos de teclado para rotación/zoom y actualiza un HUD con la info actual (incluye FOV).
 
-### Ubicaciones Preconfiguradas
+Retorno a la GUI:
 
-```python
-# Ubicaciones disponibles en la GUI:
-ubicaciones = {
-    "Quito - Vista hacia Cotopaxi": (-0.1807, -78.4678),
-    "Guayaquil - Vista hacia cordillera": (-2.1709, -79.9224),
-    "Cuenca - Ciudad colonial": (-2.9001, -79.0059),
-    "Ambato - Valle central": (-1.2549, -78.6291),
-    # ... más ubicaciones
-}
-```
+- El método `vista_3d_realista()` devuelve un diccionario con métricas útiles: dirección actual, puntos del terreno renderizados, elevación máxima/mínima, etc., que la GUI muestra en texto.
 
-### Uso Programático (Opcional)
+## 🎮 Controles 3D y HUD
 
-```python
-from horizonte_3d_gui import HorizonteViewer3D_GUI
+- Rotación: Flechas ← → ↑ ↓ o teclas A/D/W/S
+- Zoom: teclas + y − (también = como alternativa al +)
+- HUD: Se muestra información en pantalla (azimut/dirección y FOV). El FOV se actualiza al hacer zoom.
 
-# Crear visualizador
-viewer = HorizonteViewer3D_GUI()
+Nota: el ratón está deshabilitado en esta versión para evitar conflictos; todo se maneja por teclado.
 
-# Generar vista 3D
-vista = viewer.vista_3d_realista(
-    lat_observador=-0.1807,    # Quito
-    lon_observador=-78.4678,
-    azimut=90,                 # Mirando al Este
-    campo_vision=90,           # Campo de visión
-    radio_km=150              # Radio de terreno
-)
-```
+## 📦 Requisitos de datos (.hgt)
 
-## 🔧 Troubleshooting
+- El patrón de nombres debe ser SRTM, por ejemplo: `N00W073.hgt`, `S01W079.hgt`.
+- Los archivos deben corresponder al rango geográfico de Ecuador. Si se selecciona un punto sin datos (por ejemplo, mar), se informará un error.
 
-### Problemas Comunes
+## �️ Solución de problemas
 
-#### ❌ Error: "PyVista no está instalado"
-```bash
-pip install pyvista
-```
+1) “PyVista/VTK no está instalado”
 
-#### ❌ Error: "No module named 'tkinter'"
-```bash
-# Ubuntu/Debian
-sudo apt-get install python3-tk
+- `pip install -r requirements.txt`
+- Actualiza pip/wheel si persiste.
 
-# macOS
-brew install python-tk
-```
+1) Ventana 3D negra o no abre
 
-#### ❌ Error: "No se encontraron archivos .hgt"
-- Verificar que la carpeta `Matrices/` contenga archivos .hgt
-- Los archivos deben seguir el formato: `N00W073.hgt`, `S01W079.hgt`, etc.
+- Verifica soporte OpenGL y drivers de video.
+- Prueba con un entorno virtual limpio (venv).
 
-#### ❌ La ventana 3D no se abre
-- Verificar que el sistema soporte OpenGL
-- Comprobar drivers de tarjeta gráfica actualizados
+1) “No se encontraron archivos .hgt”
 
-### Logs y Debugging
+- Asegúrate de que `Matrices/` exista y tenga los tiles requeridos con el nombre correcto.
 
-La aplicación muestra información detallada en la consola:
-```
-🏔️ Iniciando Interfaz Gráfica del Visualizador 3D
-📍 Coordenadas corregidas para Ecuador continental
-🎯 GENERANDO VISTA 3D PARA GUI
-```
+1) El terreno “desaparece” al hacer zoom
 
+- Asegúrate de usar una versión que reajusta el `clipping_range` al cambiar el FOV.
 
-## 📊 Datos Técnicos
-
-- **Resolución de datos**: 1201x1201 puntos por grado
-- **Formato de elevación**: Archivos .hgt (SRTM)
-- **Cobertura geográfica**: Ecuador continental
-- **Precisión**: ~90 metros por píxel
-- **Radio máximo de visualización**: 150 km
-- **Campo de visión**: Configurable (por defecto 90°)
-
-## 📄 Licencia
-
-Este proyecto es parte de un trabajo académico de Métodos Numéricos. Uso educativo.
-
-## 👥 Autores
-
-- **Estudiantes**:
-    - Joshua Daniel Menendez Farias
-    - Celeste Gallardo
-    - Jessua Villacis
-- **Curso**: Métodos Numéricos - Cuarto Semestre
-- **Institución**: Escuela Politécnica Nacional
+## Autores
+- Daniel Menendez
+- Jesua Villacis
+- Celeste Gallardo

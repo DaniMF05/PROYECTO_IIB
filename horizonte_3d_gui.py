@@ -78,7 +78,7 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
         try:
            # 1. Cargar imagen PIL (200x200 px)
             img = Image.open(compass_image_path).convert("RGBA")
-            img = img.resize((250, 250), Image.Resampling.BILINEAR) #Redimensionamos
+            img = img.resize((150, 150), Image.Resampling.BILINEAR) #Redimensionamos
             
             # 2. Corregir orientación de la imagen (flip vertical para que no salga invertida)
             img = img.transpose(Image.FLIP_TOP_BOTTOM)
@@ -101,7 +101,7 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             win_width, win_height = plotter.window_size
             width, height = img.size
             actor2d.GetPositionCoordinate().SetCoordinateSystemToDisplay()
-            actor2d.SetPosition(win_width - width - margin -50 , win_height -height - margin -145)  # margen abajo
+            actor2d.SetPosition(win_width - width - margin -150 , win_height -height - margin -250)  # margen abajo
 
             # 7. Añadir actor al renderer
             plotter.renderer.AddActor2D(actor2d)
@@ -344,7 +344,7 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
         info_actor = None
         
         # Controles simplificados
-        controles_text = ('CONTROLES: ← → (A/D/W/S) | + - ↑ ↓ (Zoom)')
+        controles_text = ('CONTROLES:(A/D/W/S) | + - (Zoom)')
         plotter.add_text(controles_text, position='lower_left', font_size=9,
                         color='lightgreen', shadow=True)
 
@@ -365,9 +365,12 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             angulo_actual[0] = angulo_degrees
             
             
-            texto_dinamico = (f'Vista 3D - Lat: {lat:.5f}°, Lon: {lon:.5f}°\n'
-                            f'Ángulo: {angulo_degrees:.1f}° ({obtener_direccion_cardinal(angulo_degrees)})\n'
-                            f'Altura: {altura_observador_real:.1f}m')
+            texto_dinamico = (
+                f'Vista 3D - Lat: {lat:.5f}°, Lon: {lon:.5f}°\n'
+                f'Ángulo: {angulo_degrees:.1f}° ({obtener_direccion_cardinal(angulo_degrees)})\n'
+                f'Altura: {altura_observador_real:.1f}m\n'
+                f'FOV: {plotter.camera.view_angle:.1f}°'
+            )
             
             # CORRECCIÓN: Remover el actor anterior si existe y crear uno nuevo
             if info_actor is not None:
@@ -390,19 +393,9 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             """Actualiza el zoom."""
             nuevo_campo_vision = max(10, min(120, nuevo_campo_vision))
             zoom_actual[0] = nuevo_campo_vision
-            
-            # Guardar posición y foco actuales
-            pos = plotter.camera.position
-            focal = plotter.camera.focal_point
-            up = plotter.camera.up
-
             plotter.camera.view_angle = nuevo_campo_vision
             
-            # Reasignar para asegurar que no cambien
-            plotter.camera.position = pos
-            plotter.camera.focal_point = focal
-            plotter.camera.up = up
-            
+            actualizar_vista_direccion(angulo_actual[0])
             plotter.render()
 
         #Iniciar texto
