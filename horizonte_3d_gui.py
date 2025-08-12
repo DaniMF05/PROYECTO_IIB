@@ -324,16 +324,6 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
         angulo_actual = [azimut]
         zoom_actual = [campo_vision]
         
-        #Informacion estatica
-        info_text = (f'Vista 3D - Lat: {lat:.5f}°, Lon: {lon:.5f}°')
-        plotter.add_text(info_text, position='upper_left', font_size=10,
-                        color='white', shadow=True)
-        
-        # Controles simplificados
-        controles_text = ('CONTROLES: ← → ↑ ↓ (A/D/W/S) | + - (Zoom)')
-        plotter.add_text(controles_text, position='lower_left', font_size=9,
-                        color='lightgreen', shadow=True)
-        
         def obtener_direccion_cardinal(angulo):
             """Convierte ángulo a dirección cardinal."""
             angulo = angulo % 360
@@ -348,11 +338,21 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
         
         #Crear la brujula
         compass_info = self._crear_brujula_imagen(plotter, 'compass.png', azimut)
+        
+         #Informacion estatica
+        
+        info_actor = None
+        
+        # Controles simplificados
+        controles_text = ('CONTROLES: ← → (A/D/W/S) | + - ↑ ↓ (Zoom)')
+        plotter.add_text(controles_text, position='lower_left', font_size=9,
+                        color='lightgreen', shadow=True)
 
         def actualizar_vista_direccion(angulo_degrees):
             """
             Actualiza la dirección de la vista, el texto y la rotación de la brújula.
             """
+            nonlocal info_actor
             angulo_rad = math.radians(angulo_degrees)
             plotter.camera.position = [0, 0, altura_camara_real]
             plotter.camera.clipping_range = (near_clip, far_clip)
@@ -364,6 +364,21 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             
             angulo_actual[0] = angulo_degrees
             
+            
+            texto_dinamico = (f'Vista 3D - Lat: {lat:.5f}°, Lon: {lon:.5f}°\n'
+                            f'Ángulo: {angulo_degrees:.1f}° ({obtener_direccion_cardinal(angulo_degrees)})\n'
+                            f'Altura: {altura_observador_real:.1f}m')
+            
+            # CORRECCIÓN: Remover el actor anterior si existe y crear uno nuevo
+            if info_actor is not None:
+                plotter.renderer.RemoveActor2D(info_actor)
+            
+            info_actor = plotter.add_text(texto_dinamico, 
+                                        position='upper_left', 
+                                        font_size=10,
+                                        color='white', 
+                                        shadow=False)
+                
             # --- NUEVO: Actualiza la rotación de la brújula ---
             if compass_info and 'actualizar_rotacion' in compass_info:
                 compass_info['actualizar_rotacion'](angulo_degrees)
@@ -375,8 +390,23 @@ class HorizonteViewer3D_GUI(SimuladorHorizonte):
             """Actualiza el zoom."""
             nuevo_campo_vision = max(10, min(120, nuevo_campo_vision))
             zoom_actual[0] = nuevo_campo_vision
+            
+            # Guardar posición y foco actuales
+            pos = plotter.camera.position
+            focal = plotter.camera.focal_point
+            up = plotter.camera.up
+
             plotter.camera.view_angle = nuevo_campo_vision
+            
+            # Reasignar para asegurar que no cambien
+            plotter.camera.position = pos
+            plotter.camera.focal_point = focal
+            plotter.camera.up = up
+            
             plotter.render()
+
+        #Iniciar texto
+        actualizar_vista_direccion(azimut)
 
         def keypress_callback_pyvista(key):
             """Callback para teclado - Solo rotación y zoom."""
